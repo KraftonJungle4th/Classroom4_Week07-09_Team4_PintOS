@@ -109,9 +109,10 @@ sema_up (struct semaphore *sema) {
 	ASSERT (sema != NULL);
 
 	old_level = intr_disable ();
-	if (!list_empty (&sema->waiters))
+	if (!list_empty (&sema->waiters)) {
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
+	}
 	sema->value++;
 	intr_set_level (old_level);
 }
@@ -221,7 +222,25 @@ void
 lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
-	lock->holder->priority = thread_get_highest_priority_in_donors(); 
+
+	//donors목록에서 lock에 해당하는 스레드 지움
+	// for( struct list_elem *e = list_begin(&donors)
+	// ; e != &thread_current()->donor_elem ; e = e->next) {
+	// 	printf("1\n");
+	// 	if(e == list_begin(&lock->semaphore.waiters)) {
+	// 		printf("2\n");
+	// 		list_remove(e);
+	// 		printf("3\n");
+	// 		lock->holder->priority = list_entry(list_begin(&donors), struct thread, elem)->priority;
+	// 		break;
+	// 	}
+	// }
+	//lock->holder->priority = list_entry(list_begin(&donors), struct thread, elem)->priority;
+
+	
+	lock->holder->priority = lock->holder->prev_priority;
+	//printf("4\n");
+
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
 	thread_yield();
@@ -236,7 +255,7 @@ lock_held_by_current_thread (const struct lock *lock) {
 
 	return lock->holder == thread_current ();
 }
-
+
 /* One semaphore in a list. */
 struct semaphore_elem {
 	struct list_elem elem;              /* List element. */

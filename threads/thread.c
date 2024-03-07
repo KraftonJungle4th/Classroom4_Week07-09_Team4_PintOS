@@ -27,7 +27,7 @@
 #define MAX_WAKEUP_TICK 4200000000
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
-static struct list ready_list;
+struct list ready_list;
 
 static struct list sleep_list; //슬립리스트
 
@@ -222,24 +222,33 @@ thread_create (const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
+	
 	/* Add to run queue. */
 	thread_unblock (t);
-
+	
 	// 락이 있을 때
 	// TODO: 내가 락을 갖고 있고, 지금 들어온 쓰레드도 락이 필요하면, 우선순위를 들어온 쓰레드것으로 바꿔준다.
-	struct lock *new_thread_lock = (struct lock *) aux;
-	if (new_thread_lock != NULL && new_thread_lock->holder == thread_current()) {
-		if (thread_get_highest_priority_in_donors() >= priority) return tid;
-		list_insert_ordered(&thread_current() -> donors, &t->donor_elem, high_priority_first, NULL);
-		thread_yield();
-		return tid;
-	}
+	// struct lock *new_thread_lock = (struct lock *) aux;
+	// if (new_thread_lock != NULL && new_thread_lock->holder == thread_current()) {
+	// 	if(thread_current()->prev_priority < priority){
+	// 		list_insert_ordered(&donors, &t->donor_elem, high_priority_first, NULL);
+	// 	}
+	// 	if(thread_current()->priority < priority){
+	// 		thread_current()->priority = priority;
+	// 		thread_yield();
+	// 		return tid;
+	// 	}
+	// }
+	//printf("1\n");
+	
 
 	// 락이 없을 때
-	if (thread_get_highest_priority_in_donors() < priority) {
+	if (thread_current()->priority < priority) {
 		// 락을 대기하고 돌아올 수 있게끔 양보한다.
+		thread_current()->priority = priority;
 		thread_yield();	
 	}
+
 
 	return tid;
 }
@@ -356,7 +365,7 @@ void thread_wakeup(int64_t cur_tick) {
 	if (list_empty(&sleep_list))
 		return;
 	struct thread *wakeup_first_thread = list_entry(list_begin(&sleep_list), struct thread, elem);
-	while (wakeup_first_thread->wakeup_tick <= cur_tick) {
+	while (wakeup_first_thread->wakeup_tick <= cur_tick && !list_empty(&sleep_list)) {
 		enum intr_level old_level = intr_disable ();
 		wakeup_first_thread->status = THREAD_READY;
 		list_insert_ordered(&ready_list, list_pop_front (&sleep_list), high_priority_first, NULL);
@@ -399,18 +408,24 @@ thread_set_priority (int new_priority) {
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) {
+	
 	return thread_current ()->priority;
+	// if (list_empty(&thread_current() -> donors))
+	// 	return thread_get_priority();
+	//struct thread *high_priority_thread = list_entry(list_begin(thread_current() -> donors), struct thread, donor_elem);
+	//ASSERT (high_priority_thread->priority > thread_get_priority());
+// 	return high_priority_thread->priority;
 }
 
 /* Returns 우선순위 기부 쓰레드 중 가장 우선순위가 높은 값. */
-int
-thread_get_highest_priority_in_donors (void) {
-	if (list_empty(&thread_current() -> donors))
-		return thread_get_priority();
-	struct thread *high_priority_thread = list_entry(list_begin(&thread_current() -> donors), struct thread, donor_elem);
-	ASSERT (high_priority_thread->priority > thread_get_priority());
-	return high_priority_thread->priority;
-}
+// int
+// thread_get_highest_priority_in_donors (void) {
+// 	if (list_empty(&thread_current() -> donors))
+// 		return thread_get_priority();
+// 	struct thread *high_priority_thread = list_entry(list_begin(&thread_current() -> donors), struct thread, donor_elem);
+// 	ASSERT (high_priority_thread->priority > thread_get_priority());
+// 	return high_priority_thread->priority;
+// }
 
 /* Sets the current thread's nice value to NICE. */
 void
@@ -511,10 +526,11 @@ init_thread (struct thread *t, const char *name, int priority) {
 	strlcpy (t->name, name, sizeof t->name);
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
+	t->prev_priority = priority;
 	t->magic = THREAD_MAGIC;
 
-	list_init(&t->donors);
-	list_insert_ordered(&t->donors, &t->donor_elem, high_priority_first, NULL);
+	list_init(&donors);
+	//list_insert_ordered(&t->donors, &t->donor_elem, high_priority_first, NULL);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

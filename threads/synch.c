@@ -32,6 +32,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -60,14 +61,25 @@ sema_init (struct semaphore *sema, unsigned value) {
 void
 sema_down (struct semaphore *sema) {
 	enum intr_level old_level;
+	struct thread *main_thread = list_entry(list_begin(&ready_list), struct thread, elem);
+	int before_thread_priority = main_thread->priority;
+	int flag = 0;
 
 	ASSERT (sema != NULL);
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
 	while (sema->value == 0) {
+		if (main_thread->priority < thread_current()->priority) {
+			main_thread->priority = thread_current()->priority;
+			flag = 1;
+		}// 락을 대기하고 돌아올 수 있게끔 양보한다.
 		list_insert_ordered (&sema->waiters, &thread_current ()->elem, high_priority_first, NULL);
 		thread_block ();
+		if (flag)
+			main_thread->priority = before_thread_priority;
+		
+		
 	}
 	sema->value--;
 	intr_set_level (old_level);
@@ -105,15 +117,20 @@ sema_try_down (struct semaphore *sema) {
 void
 sema_up (struct semaphore *sema) {
 	enum intr_level old_level;
-
 	ASSERT (sema != NULL);
+	int flag = 0;
 
 	old_level = intr_disable ();
 	if (!list_empty (&sema->waiters)) {
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
+		flag = 1;
 	}
 	sema->value++;
+	// if(flag)
+	// 	thread_yield();
+	// else
+	// 	schedule();
 	intr_set_level (old_level);
 }
 
@@ -223,26 +240,12 @@ lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
-	//donors목록에서 lock에 해당하는 스레드 지움
-	// for( struct list_elem *e = list_begin(&donors)
-	// ; e != &thread_current()->donor_elem ; e = e->next) {
-	// 	printf("1\n");
-	// 	if(e == list_begin(&lock->semaphore.waiters)) {
-	// 		printf("2\n");
-	// 		list_remove(e);
-	// 		printf("3\n");
-	// 		lock->holder->priority = list_entry(list_begin(&donors), struct thread, elem)->priority;
-	// 		break;
-	// 	}
-	// }
-	//lock->holder->priority = list_entry(list_begin(&donors), struct thread, elem)->priority;
-
-	
-	lock->holder->priority = lock->holder->prev_priority;
-	//printf("4\n");
-
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
+	// if(!list_empty (&lock->semaphore.waiters))
+	// 	thread_yield();
+	// else
+	// 	do_schedule(THREAD_READY);
 	thread_yield();
 }
 

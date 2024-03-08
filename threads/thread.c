@@ -226,28 +226,8 @@ thread_create (const char *name, int priority,
 	/* Add to run queue. */
 	thread_unblock (t);
 	
-	// 락이 있을 때
-	// TODO: 내가 락을 갖고 있고, 지금 들어온 쓰레드도 락이 필요하면, 우선순위를 들어온 쓰레드것으로 바꿔준다.
-	// struct lock *new_thread_lock = (struct lock *) aux;
-	// if (new_thread_lock != NULL && new_thread_lock->holder == thread_current()) {
-	// 	if(thread_current()->prev_priority < priority){
-	// 		list_insert_ordered(&donors, &t->donor_elem, high_priority_first, NULL);
-	// 	}
-	// 	if(thread_current()->priority < priority){
-	// 		thread_current()->priority = priority;
-	// 		thread_yield();
-	// 		return tid;
-	// 	}
-	// }
-	//printf("1\n");
-	
-
-	// 락이 없을 때
-	if (thread_current()->priority < priority) {
-		// 락을 대기하고 돌아올 수 있게끔 양보한다.
-		thread_current()->priority = priority;
-		thread_yield();	
-	}
+	if(thread_current()->priority < priority)
+		thread_yield();
 
 
 	return tid;
@@ -410,11 +390,6 @@ int
 thread_get_priority (void) {
 	
 	return thread_current ()->priority;
-	// if (list_empty(&thread_current() -> donors))
-	// 	return thread_get_priority();
-	//struct thread *high_priority_thread = list_entry(list_begin(thread_current() -> donors), struct thread, donor_elem);
-	//ASSERT (high_priority_thread->priority > thread_get_priority());
-// 	return high_priority_thread->priority;
 }
 
 /* Returns 우선순위 기부 쓰레드 중 가장 우선순위가 높은 값. */

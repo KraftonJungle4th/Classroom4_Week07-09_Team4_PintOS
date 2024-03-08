@@ -377,6 +377,10 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
+	if (!list_empty(&thread_current() -> donors) && thread_get_highest_priority_in(&thread_current() -> donors) > new_priority) {
+		thread_current() -> prev_priority = new_priority;
+		return;
+	}
 	thread_current ()->priority = new_priority;
 
 	struct thread *high_priority_thread = list_entry(list_begin(&ready_list), struct thread, elem);

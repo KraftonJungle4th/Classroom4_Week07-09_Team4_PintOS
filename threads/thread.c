@@ -227,7 +227,7 @@ thread_create (const char *name, int priority,
 
 	/* Add to run queue. */
 	thread_unblock (t);
-	if (thread_get_highest_priority_in(&(thread_current() -> donors)) < priority) {
+	if (thread_get_priority() < priority) {
 		thread_yield();
 	}
 	return tid;

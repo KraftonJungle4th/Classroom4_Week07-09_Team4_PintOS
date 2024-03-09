@@ -85,7 +85,7 @@ typedef int tid_t;
  * only because they are mutually exclusive: only a thread in the
  * ready state is on the run queue, whereas only a thread in the
  * blocked state is on a semaphore wait list. */
-struct list donors;					/* 우선순위를 기부한 쓰레드들 */
+
 struct thread {
 	/* Owned by thread.c. */
 	tid_t tid;                          /* Thread identifier. */
@@ -94,9 +94,10 @@ struct thread {
 	int priority;                       /* Priority. */
 	int prev_priority;                  /* donate 되기 전 Priority. */
 	int64_t wakeup_tick;				/* 스레드가 깨어날 시각 (tick) */
-	// void **wait_on_lock;			    /* 보유한 lock의 주소 */
+	void *wait_on_lock;			    /* 보유한 lock의 주소 */
 	struct list_elem donor_elem;        /* 기부 쓰레드 목록에 들어갈 원소 */
-	
+	struct list donors;					/* 우선순위를 기부한 쓰레드들 */
+
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 

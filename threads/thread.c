@@ -379,8 +379,10 @@ void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
 
-	struct thread *high_priority_thread = list_entry(list_begin(&ready_list), struct thread, elem);
-	if (high_priority_thread->priority > new_priority) {
+	if(list_empty(&ready_list))
+		return;
+	struct thread *high_priority_readylist_thread = list_entry(list_begin(&ready_list), struct thread, elem);
+	if (high_priority_readylist_thread->priority > new_priority) {
 		thread_yield();
 	}
 }
@@ -504,7 +506,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->prev_priority = priority;
 	t->magic = THREAD_MAGIC;
 
-	list_init(&donors);
+	list_init(&t->donors);
 	//list_insert_ordered(&t->donors, &t->donor_elem, high_priority_first, NULL);
 }
 

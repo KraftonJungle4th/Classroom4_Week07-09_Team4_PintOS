@@ -200,6 +200,7 @@ thread_create (const char *name, int priority,
 		thread_func *function, void *aux) {
 	struct thread *t;
 	tid_t tid;
+	int cur_priority;
 
 	ASSERT (function != NULL);
 
@@ -227,7 +228,12 @@ thread_create (const char *name, int priority,
 
 	/* Add to run queue. */
 	thread_unblock (t);
-	if (thread_get_priority() < priority) {
+	cur_priority = thread_current() -> priority;
+	printf("cur_priority : %d\n",cur_priority);
+	printf("thread_get_priority() : %d\n", thread_get_priority());
+	printf("thread_current() -> priority : %d\n",thread_current() -> priority);
+	printf("new priority : %d\n\n", priority);
+	if (thread_current() -> priority < priority) {
 		thread_yield();
 	}
 	return tid;
@@ -381,8 +387,11 @@ thread_set_priority (int new_priority) {
 		thread_current() -> prev_priority = new_priority;
 		return;
 	}
+	
 	thread_current ()->priority = new_priority;
 
+	if(list_empty(&ready_list))
+		return;
 	struct thread *high_priority_thread = list_entry(list_begin(&ready_list), struct thread, elem);
 	if (high_priority_thread->priority > new_priority) {
 		thread_yield();

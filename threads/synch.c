@@ -116,8 +116,12 @@ sema_up (struct semaphore *sema) {
 	}
 	sema->value++;
 	intr_set_level (old_level);
-	// 락 해제후 기부 목록 중 가장 높은 우선순위로 변경
-	thread_set_priority(thread_get_highest_priority_in(&thread_current()-> donors));
+	
+		
+	//if(!list_empty(&thread_current()-> donors))// 락 해제후 기부 목록 중 가장 높은 우선순위로 변경
+		thread_set_priority(thread_get_highest_priority_in(&thread_current()-> donors));
+	//  else										//락 해제후 기부 목록 없다면 다음 레디리스트에 있는걸로
+	//  	thread_yield();
 }
 
 static void sema_test_helper (void *sema_);
@@ -191,21 +195,23 @@ lock_acquire (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
+	struct thread *holder = lock->holder;
+	
 	// 락을 얻지 못하는 상황
-	if (lock->semaphore.value==0) {
+	if (holder) {
 		// 현재 쓰레드가 기다리는 락의 주소를 저장
 		thread_current() -> wait_on_lock = lock;
 		// 락을 보유한 쓰레드가 나보다 우선순위가 낮으면 현재 실행 쓰레드의 우선순위를 기부해야한다.
-		struct thread *holder = lock->holder;
 		int current_priority = thread_get_priority();
 		// multiple-donation
 		if (holder->priority < current_priority) {
 			list_insert_ordered(&(holder->donors), &(thread_current() -> donor_elem), high_priority_first_for_donor, NULL);
 			holder->priority = current_priority;
 		}
+
 		// nested-lock
 		// 락이 중첩되어 있을 수도 있으므로, 락이 연결된 곳을 순회하여 현재 실행 쓰레드보다 낮은 우선순위를 가지면 기부한다.
-		while (holder != NULL && holder->wait_on_lock != NULL) {
+		while (holder->wait_on_lock) {
 			struct lock *prev_lock = holder->wait_on_lock;
 			// 락 보유자들에게 우선순위를 기부한다 
 			if (prev_lock->holder->priority < current_priority) {
@@ -315,6 +321,7 @@ cond_wait (struct condition *cond, struct lock *lock) {
 
 	sema_init (&waiter.semaphore, 0);
 	list_push_back (&cond->waiters, &waiter.elem);
+	//list_insert_ordered(&cond->waiters, &waiter.elem, high_priority_first, NULL);
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
 	lock_acquire (lock);
@@ -334,11 +341,12 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 	ASSERT (!intr_context ());
 	ASSERT (lock_held_by_current_thread (lock));
 
-	if (!list_empty (&cond->waiters))
+	if (!list_empty (&cond->waiters)){
+		//list_sort(&cond->waiters, high_priority_first, NULL);
 		sema_up (&list_entry (list_pop_front (&cond->waiters),
 					struct semaphore_elem, elem)->semaphore);
+	}
 }
-
 /* Wakes up all threads, if any, waiting on COND (protected by
    LOCK).  LOCK must be held before calling this function.
 

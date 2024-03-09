@@ -57,9 +57,9 @@ test_priority_fifo (void)
   output = op = malloc (sizeof *output * THREAD_CNT * ITER_CNT * 2);
   ASSERT (output != NULL);
   lock_init (&lock);
-  printf("cur's priority : %d\n\n\n",thread_current()->priority);
+
   thread_set_priority (PRI_DEFAULT + 2);
-  printf("cur's priority : %d\n\n\n",thread_current()->priority);
+  
   for (i = 0; i < THREAD_CNT; i++) 
     {
       char name[16];
@@ -97,7 +97,7 @@ simple_thread_func (void *data_)
 {
   struct simple_thread_data *data = data_;
   int i;
-  printf("jj\n");
+  
   for (i = 0; i < ITER_CNT; i++) 
     {
       lock_acquire (data->lock);

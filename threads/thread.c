@@ -157,7 +157,6 @@ thread_start (void) {
 void
 thread_tick (void) {
 	struct thread *t = thread_current ();
-
 	/* Update statistics. */
 	if (t == idle_thread)
 		idle_ticks++;
@@ -377,14 +376,13 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
-	if (!list_empty(&thread_current() -> donors) && thread_get_highest_priority_in(&thread_current() -> donors) > new_priority) {
+	if (!list_empty(&thread_current() -> donors)) {
 		thread_current() -> prev_priority = new_priority;
 		return;
 	}
 	thread_current ()->priority = new_priority;
-
 	struct thread *high_priority_thread = list_entry(list_begin(&ready_list), struct thread, elem);
-	if (high_priority_thread->priority > new_priority) {
+	if (high_priority_thread && high_priority_thread->priority > new_priority) {
 		thread_yield();
 	}
 }
@@ -538,6 +536,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->priority = priority;
 	t->prev_priority = priority;
 	t->magic = THREAD_MAGIC;
+	t->thread_tick = 0;
 
 	list_init(&t->donors);
 }

@@ -116,8 +116,8 @@ sema_up (struct semaphore *sema) {
 	}
 	sema->value++;
 	intr_set_level (old_level);
-	// 락 해제후 기부 목록 중 가장 높은 우선순위로 변경
-	thread_set_priority(thread_get_highest_priority_in(&thread_current()-> donors));
+	thread_yield(); // 우선순위가 변경된 경우에 다시 ready_list에 넣어주기 위함
+	// ( 만약 현재 실행흐름이 우선순위가 가장 높다면 곧바로 실행흐름을 가져온다. )
 }
 
 static void sema_test_helper (void *sema_);
@@ -253,8 +253,11 @@ lock_release (struct lock *lock) {
 	ASSERT (lock_held_by_current_thread (lock));
 	// 우선순위를 기부 받았다면, 기부목록(donors)에서 제거한다.
 	struct list *donors = &(lock->holder->donors);
-	if (!list_empty(donors))
+	// 락 해제후 기부 목록 중 가장 높은 우선순위로 변경
+	if (!list_empty(donors)) {
 		list_remove_donor(donors, lock);
+		thread_current() -> priority = thread_get_highest_priority_in(donors);
+	} 
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
 }

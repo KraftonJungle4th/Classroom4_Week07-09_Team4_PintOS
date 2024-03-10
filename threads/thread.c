@@ -47,7 +47,7 @@ static struct list destruction_req;
 static long long idle_ticks;    	/* # of timer ticks spent idle. */
 static long long kernel_ticks;  	/* # of timer ticks in kernel threads. */
 static long long user_ticks;    	/* # of timer ticks in user programs. */
-static long long first_wakeup_tick;	/* minimum wakeup tick */ 
+//static long long first_wakeup_tick;	/* minimum wakeup tick */ 
 
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
@@ -121,7 +121,7 @@ thread_init (void) {
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid ();
 
-	first_wakeup_tick = MAX_WAKEUP_TICK;
+	//first_wakeup_tick = MAX_WAKEUP_TICK;
 }
 
 static bool
@@ -317,45 +317,43 @@ thread_exit (void) {
 
 bool
 thread_can_wakeup (int64_t curr_tick) {
-	return curr_tick >= first_wakeup_tick;
+	if(list_empty(&sleep_list))
+		return false;
+	struct thread *first_thread = list_entry(list_begin(&sleep_list),struct thread, elem);
+	return curr_tick >= first_thread->wakeup_tick;
 }
 
 void
-thread_sleep (int64_t wakeup_tick) {
+thread_sleep (int64_t wakeup_tick) { //스레드를 재워주는 함수
 	struct thread *curr = thread_current ();
 	enum intr_level old_level;
 
 	ASSERT (!intr_context ());
 
-	if (curr == idle_thread)
+	if (curr == idle_thread) //현재 스레드가 아이들 스레드면 그냥 리턴
 		return;
 
-	old_level = intr_disable ();
-	curr->wakeup_tick = wakeup_tick;
-	curr->status = THREAD_BLOCKED;
-	if (first_wakeup_tick > wakeup_tick)
-		first_wakeup_tick = wakeup_tick;
-	if (curr != idle_thread)
-		list_insert_ordered(&sleep_list, &curr->elem, wakeup_tick_less_and_high_priority_first, NULL);
-	schedule();
-	intr_set_level (old_level);
+	old_level = intr_disable (); //슬립하는 도중에 인터럽트가 발생하면 안됨
+
+	curr->wakeup_tick = wakeup_tick; //스레드가 깨어날 시각을 매개변수값으로 설정.
+	list_insert_ordered(&sleep_list, &curr->elem, wakeup_tick_less_and_high_priority_first, NULL); //깨어날 시간 기준으로 정렬해주고 같다면 우선순위 기준으로 정렬
+	do_schedule(THREAD_BLOCKED); //현재 스레드의 상태를 block로 만들고 다음 스레드 실행
+
+	intr_set_level (old_level); 
 }
 
 void thread_wakeup(int64_t cur_tick) {
 	if (list_empty(&sleep_list))
 		return;
-	struct thread *wakeup_first_thread = list_entry(list_begin(&sleep_list), struct thread, elem);
-	while (wakeup_first_thread->wakeup_tick <= cur_tick && !list_empty(&sleep_list)) {
-		enum intr_level old_level = intr_disable ();
-		wakeup_first_thread->status = THREAD_READY;
-		list_insert_ordered(&ready_list, list_pop_front (&sleep_list), high_priority_first, NULL);
-		wakeup_first_thread = list_entry(list_begin(&sleep_list), struct thread, elem);
-		intr_set_level (old_level);
+	struct thread *wakeup_thread = list_entry(list_begin(&sleep_list), struct thread, elem);
+	enum intr_level old_level = intr_disable (); //깨우는 도중에 인터럽트가 발생하면 안됨
+	//sleep_list에 있는 스레드중에 깨어날 시간이 현재 시간보다 작은 스레드들을 깨워줌
+	while (wakeup_thread->wakeup_tick <= cur_tick && !list_empty(&sleep_list)) { 
+		wakeup_thread->status = THREAD_READY; //깨울 스레드의 상태를 레디상태로 바꿔주고
+		list_insert_ordered(&ready_list, list_pop_front (&sleep_list), high_priority_first, NULL); //레디 리스트에 넣는다.
+		wakeup_thread = list_entry(list_begin(&sleep_list), struct thread, elem);
 	}
-	if (list_empty(&sleep_list))
-		first_wakeup_tick = MAX_WAKEUP_TICK;
-	else
-		first_wakeup_tick = wakeup_first_thread->wakeup_tick;
+	intr_set_level (old_level);
 }
 
 /* Yields the CPU.  The current thread is not put to sleep and
@@ -395,16 +393,6 @@ thread_get_priority (void) {
 	
 	return thread_current ()->priority;
 }
-
-/* Returns 우선순위 기부 쓰레드 중 가장 우선순위가 높은 값. */
-// int
-// thread_get_highest_priority_in_donors (void) {
-// 	if (list_empty(&thread_current() -> donors))
-// 		return thread_get_priority();
-// 	struct thread *high_priority_thread = list_entry(list_begin(&thread_current() -> donors), struct thread, donor_elem);
-// 	ASSERT (high_priority_thread->priority > thread_get_priority());
-// 	return high_priority_thread->priority;
-// }
 
 /* Sets the current thread's nice value to NICE. */
 void

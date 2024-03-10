@@ -209,7 +209,7 @@ lock_acquire (struct lock *lock) {
 			if(connect_lock->holder->priority < thread_current()->priority) {
 				connect_lock->holder->priority = thread_current()->priority;
 			}
-			connect_lock = (struct lock *)lock->holder->wait_on_lock;
+			connect_lock = (struct lock *)connect_lock->holder->wait_on_lock;
 		}
 	}
 	else //락을 지니고있는 스레드가 없다면

@@ -254,14 +254,6 @@ list_pop_front (struct list *list) {
 	return front;
 }
 
-void
-search_and_delite_list(struct list *list, struct list_elem *elem){
-	struct list_elem *e;
-	for (e = list_begin (list); e != list_end (list); e = list_next (e)){
-		
-	}
-		
-}
 /* Removes the back element from LIST and returns it.
    Undefined behavior if LIST is empty before removal. */
 struct list_elem *

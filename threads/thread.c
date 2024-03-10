@@ -257,7 +257,7 @@ thread_block (void) {
    update other data. */
 void
 thread_unblock (struct thread *t) {
-	enum intr_level old_level;
+	enum intr_level old_level; 
 
 	ASSERT (is_thread (t));
 
@@ -377,8 +377,10 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
-
+	if(list_empty(&thread_current()->donors)) //도너 리스트가 있으면 현재 우선순위를 바꾸면 안됨.
+		thread_current ()->priority = new_priority;
+	thread_current ()->prev_priority = new_priority;
+	
 	if(list_empty(&ready_list))
 		return;
 	struct thread *high_priority_readylist_thread = list_entry(list_begin(&ready_list), struct thread, elem);
@@ -438,6 +440,17 @@ high_priority_first (const struct list_elem *a_, const struct list_elem *b_,
 {
   const struct thread *a = list_entry (a_, struct thread, elem);
   const struct thread *b = list_entry (b_, struct thread, elem);
+  
+  return a->priority > b->priority;
+}
+
+/* 높은 우선순위는 낮은 우선순위 값을 가진다.*/
+bool
+high_priority_first_in_donors (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED) 
+{
+  const struct thread *a = list_entry (a_, struct thread, donor_elem);
+  const struct thread *b = list_entry (b_, struct thread, donor_elem);
   
   return a->priority > b->priority;
 }

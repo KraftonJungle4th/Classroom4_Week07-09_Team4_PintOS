@@ -153,4 +153,6 @@ int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
 bool high_priority_first (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);
+bool high_priority_first_in_donors (const struct list_elem *a_, const struct list_elem *b_,
+            void *aux UNUSED) ;
 #endif /* threads/thread.h */

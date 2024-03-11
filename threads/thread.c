@@ -342,7 +342,8 @@ thread_sleep (int64_t wakeup_tick) { //스레드를 재워주는 함수
 	intr_set_level (old_level); 
 }
 
-void thread_wakeup(int64_t cur_tick) {
+void 
+thread_wakeup(int64_t cur_tick) {
 	if (list_empty(&sleep_list))
 		return;
 	struct thread *wakeup_thread = list_entry(list_begin(&sleep_list), struct thread, elem);

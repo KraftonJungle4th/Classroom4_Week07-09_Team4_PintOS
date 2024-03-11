@@ -248,7 +248,6 @@ lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 	int flag = 1;
-	//printf("(릴리스함수 안 %s ) thread_current()->priority : %d\n",thread_name(), thread_current()->priority);
 	//release함수에 온다는건 락 홀더가 무조건 있음.
 	struct thread *lockholer = lock->holder;
 	//도너 리스트를 돌면서 해당 락을 가지고 있는 리스트를 삭제

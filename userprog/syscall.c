@@ -87,6 +87,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	 * 2. 각 번호에 맞게 분기한다.
 	 * 3. 각 시스템 콜에 맞는 코드를 작성한다.
 	 */
+	thread_exit();
 	int syscall_num = f->R.rax;
 	switch (syscall_num) {
 		case SYS_HALT:
@@ -185,11 +186,11 @@ int read (int fd, void *buffer, unsigned size) {
 	else if (fd == 1)
 		return -1;
 	else { // 표준 입출력이 아닐 때
-		lock_acquire(&filesys_lock);
+		//lock_acquire(&filesys_lock);
 		struct file_descriptor *file_desc = find_file_descriptor(fd);
 		if (file_desc == NULL) return -1;
 		byte = file_read(file_desc->file_p, buffer, size);
-		lock_release(&filesys_lock);
+		//lock_release(&filesys_lock);
 	}
 	
 	return byte;
@@ -206,11 +207,11 @@ int write(int fd, void *buffer, unsigned length) {
 		putbuf(buffer, length);
 		byte = length;
 	} else { //표준 입출력이 아닐 때
-		lock_acquire(&filesys_lock);
+		//lock_acquire(&filesys_lock);
 		struct file_descriptor *file_desc = find_file_descriptor(fd);
 		if (file_desc == NULL) return -1;
 		byte = file_write(file_desc->file_p, buffer, length);
-		lock_release(&filesys_lock);
+		//lock_release(&filesys_lock);
 	}
 
 	return byte;
@@ -229,9 +230,9 @@ int open (const char *file) {
 	
 	int fd = -1;
 	if (opened_file != NULL) {
-		lock_acquire(&filesys_lock);
+		//lock_acquire(&filesys_lock);
 	 	fd = allocate_fd(opened_file, &thread_current()->fd_list);
-		lock_release(&filesys_lock);
+		//lock_release(&filesys_lock);
 	}
 	return fd;
 }
@@ -239,11 +240,11 @@ int open (const char *file) {
 void close (int fd) {
 	struct file_descriptor *file_desc = find_file_descriptor(fd);
 	if (file_desc == NULL) return;
-	lock_acquire(&filesys_lock);
+	//lock_acquire(&filesys_lock);
 	file_close(file_desc->file_p);
 	list_remove(&file_desc->fd_elem);
 	free(file_desc);
-	lock_release(&filesys_lock);
+	//lock_release(&filesys_lock);
 }
 
 int filesize (int fd) {

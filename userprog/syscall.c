@@ -87,7 +87,6 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	 * 2. 각 번호에 맞게 분기한다.
 	 * 3. 각 시스템 콜에 맞는 코드를 작성한다.
 	 */
-	thread_exit();
 	int syscall_num = f->R.rax;
 	switch (syscall_num) {
 		case SYS_HALT:
